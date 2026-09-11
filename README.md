@@ -103,4 +103,4 @@ React).
 
 ## Licence
 
-Pas encore choisie — à définir avant de partager ce dépôt plus largement.
+[AGPL-3.0](LICENSE).
