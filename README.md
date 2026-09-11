@@ -57,8 +57,9 @@ vanish(element, { html2canvas, onDone: () => element.remove() });
 | `driftLift` | `25` | Décalage vertical (px) vers le haut : la poussière s'envole plus qu'elle ne tombe. |
 | `rotation` | `20` | Rotation max (deg) appliquée à un fragment en s'envolant. |
 | `html2canvas` | `window.html2canvas` | Injecte ta propre instance (utile en test, ou avec un bundler). |
+| `timeoutMs` | `4000` | Si html2canvas ne répond pas dans ce délai (mobile sous-puissant, page trop lourde...), abandonne l'effet et appelle `onDone` plutôt que de bloquer indéfiniment. |
 
-## ⚠️ Deux pièges à connaître
+## ⚠️ Trois pièges à connaître
 
 **Fond transparent** — `html2canvas` ne capture que ce qui est peint sur
 `element` lui-même. Si le fond visuel de ta page vient d'un ancêtre plus
@@ -78,6 +79,14 @@ contenu, même si Vanish le remet lui-même à vide juste avant `onDone`
 (la réutilisation peut survenir après). Donne à ces deux branches une
 clé/condition distincte pour garantir un nœud DOM neuf (ex. `key` en
 React).
+
+**Firefox (constaté sur Android) : capture vide** — `html2canvas` a un
+bug connu sur Firefox ([niklasvh/html2canvas#2254](https://github.com/niklasvh/html2canvas/issues/2254)) :
+`getImageData` renvoie une image vide/transparente si le canvas produit
+n'a jamais été posé dans le DOM (Chrome n'a pas ce problème). Vanish le
+fait déjà pour toi (collé hors champ le temps de lire ses pixels, puis
+retiré) — rien à faire de ton côté, mais si tu appelles `html2canvas`
+toi-même ailleurs dans ton code, garde ce piège en tête.
 
 ## Comment ça marche
 

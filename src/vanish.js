@@ -26,7 +26,25 @@ const DEFAULTS = {
   driftDistance: 70, // distance horizontale max (px) parcourue par un fragment
   driftLift: 25, // décalage vertical (px) ajouté vers le haut : la poussière s'envole plus qu'elle ne tombe
   rotation: 20, // rotation max (deg) appliquée à un fragment en s'envolant
+  timeoutMs: 4000, // si html2canvas ne répond pas (mobile sous-puissant...), abandonne l'effet plutôt que de bloquer indéfiniment
 };
+
+// Firefox (constaté sur Android) rend `getImageData` vide/transparent si
+// le canvas produit par html2canvas n'a jamais été posé dans le DOM —
+// bug connu d'html2canvas sur Firefox (niklasvh/html2canvas#2254), Chrome
+// n'a pas ce problème. On le colle donc brièvement hors champ (pas en
+// `display:none`, qui déclenche le même bug que ne pas l'ajouter du tout)
+// le temps de lire ses pixels, puis on le retire aussitôt.
+function readImageData(sourceCanvas) {
+  const { width, height } = sourceCanvas;
+  sourceCanvas.style.cssText = "position:fixed; left:-99999px; top:0; opacity:0; pointer-events:none;";
+  document.body.appendChild(sourceCanvas);
+  try {
+    return sourceCanvas.getContext("2d").getImageData(0, 0, width, height);
+  } finally {
+    sourceCanvas.remove();
+  }
+}
 
 // Découpe le canvas source en `count` fragments : chaque pixel est
 // assigné aléatoirement à l'un d'eux, mais avec un biais sur sa position
@@ -36,7 +54,7 @@ const DEFAULTS = {
 function splitIntoFragments(sourceCanvas, count, repetitionCount) {
   const { width, height } = sourceCanvas;
   const ctx = sourceCanvas.getContext("2d");
-  const original = ctx.getImageData(0, 0, width, height);
+  const original = readImageData(sourceCanvas);
   const imageDatas = Array.from({ length: count }, () => ctx.createImageData(width, height));
 
   for (let x = 0; x < width; x++) {
@@ -93,6 +111,7 @@ function splitIntoFragments(sourceCanvas, count, repetitionCount) {
  * @param {number} [options.driftDistance]
  * @param {number} [options.driftLift]
  * @param {number} [options.rotation]
+ * @param {number} [options.timeoutMs] Si html2canvas ne répond pas dans ce délai, abandonne l'effet et appelle `onDone` plutôt que de bloquer indéfiniment.
  * @param {typeof html2canvas} [options.html2canvas] Injecte ta propre instance d'html2canvas (utile en test) — sinon `window.html2canvas` doit déjà être chargé.
  */
 export async function vanish(element, options = {}) {
@@ -110,10 +129,10 @@ export async function vanish(element, options = {}) {
 
   try {
     const rect = element.getBoundingClientRect();
-    const sourceCanvas = await html2canvas(element, {
-      backgroundColor: opts.backgroundColor,
-      scale: window.devicePixelRatio || 1,
-    });
+    const sourceCanvas = await Promise.race([
+      html2canvas(element, { backgroundColor: opts.backgroundColor, scale: window.devicePixelRatio || 1 }),
+      new Promise((_, reject) => setTimeout(() => reject(new Error("html2canvas timeout")), opts.timeoutMs)),
+    ]);
 
     const overlay = document.createElement("div");
     overlay.style.cssText = `position:fixed; left:${rect.left}px; top:${rect.top}px; width:${rect.width}px; height:${rect.height}px; pointer-events:none; z-index:9999; overflow:visible;`;
