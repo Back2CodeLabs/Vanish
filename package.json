@@ -1,0 +1,27 @@
+{
+  "name": "vanish-fx",
+  "version": "0.1.0",
+  "description": "Effet de désintégration façon Thanos (Avengers) sur n'importe quel élément du DOM.",
+  "type": "module",
+  "main": "src/vanish.js",
+  "module": "src/vanish.js",
+  "files": [
+    "src"
+  ],
+  "keywords": [
+    "thanos",
+    "disintegration",
+    "vanish",
+    "animation",
+    "html2canvas",
+    "dom",
+    "effect"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Back2CodeLabs/Vanish.git"
+  },
+  "peerDependencies": {
+    "html2canvas": "^1.4.1"
+  }
+}
